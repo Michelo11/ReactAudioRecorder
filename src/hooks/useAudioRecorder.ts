@@ -6,7 +6,6 @@ export interface recorderControls {
   stopRecording: () => void;
   recordingBlob?: Blob;
   isRecording: boolean;
-  isPaused: boolean;
   recordingTime: number;
 }
 
@@ -42,7 +41,6 @@ const useAudioRecorder: (
   onNotAllowedOrFound?: (exception: DOMException) => void
 ) => recorderControls = (audioTrackConstraints, onNotAllowedOrFound) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout>();
   const [recordingBlob, setRecordingBlob] = useState<Blob>();
@@ -89,22 +87,21 @@ const useAudioRecorder: (
    * Calling this method results in a recording in progress being stopped and the resulting audio being present in `recordingBlob`. Sets `isRecording` to false
    */
   const stopRecording: () => void = useCallback(async () => {
-   const res = await Microphone.stopRecording();
+    const res = await Microphone.stopRecording();
     _stopTimer();
     setRecordingTime(0);
     setIsRecording(false);
-    setIsPaused(false);
 
-    
+    if (!res.base64String) return;
 
-  }, [setRecordingTime, setIsRecording, setIsPaused, _stopTimer]);
+    setRecordingBlob(new Blob([res.base64String], { type: "audio/m4a" }));
+  }, [setRecordingTime, setIsRecording, _stopTimer]);
 
   return {
     startRecording,
     stopRecording,
     recordingBlob,
     isRecording,
-    isPaused,
     recordingTime,
   };
 };
