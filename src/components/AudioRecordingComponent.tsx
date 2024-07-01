@@ -1,20 +1,13 @@
 import type { ReactElement } from "react";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import type { Props } from "./interfaces";
 import useAudioRecorder from "../hooks/useAudioRecorder";
 
 import micSVG from "../icons/mic.svg";
-import pauseSVG from "../icons/pause.svg";
-import resumeSVG from "../icons/play.svg";
 import saveSVG from "../icons/save.svg";
 import stopSVG from "../icons/stop.svg";
 import discardSVG from "../icons/discard.svg";
 import "../styles/audio-recorder.css";
-
-const LiveAudioVisualizer = React.lazy(async () => {
-  const { LiveAudioVisualizer } = await import("react-audio-visualize");
-  return { default: LiveAudioVisualizer };
-});
 
 /**
  * Usage: https://github.com/samhirtarif/react-audio-recorder#audiorecorder-component
@@ -37,27 +30,18 @@ const AudioRecorder: (props: Props) => ReactElement = ({
   audioTrackConstraints,
   downloadOnSavePress = false,
   downloadFileExtension = "webm",
-  showVisualizer = false,
-  mediaRecorderOptions,
   classes,
 }: Props) => {
   const {
     startRecording,
     stopRecording,
-    togglePauseResume,
     recordingBlob,
     isRecording,
-    isPaused,
     recordingTime,
-    mediaRecorder,
   } =
     recorderControls ??
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useAudioRecorder(
-      audioTrackConstraints,
-      onNotAllowedOrFound,
-      mediaRecorderOptions
-    );
+    useAudioRecorder(audioTrackConstraints, onNotAllowedOrFound);
 
   const [shouldSave, setShouldSave] = useState(false);
 
@@ -122,7 +106,7 @@ const AudioRecorder: (props: Props) => ReactElement = ({
         void downloadBlob(recordingBlob);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingBlob]);
 
   return (
@@ -161,29 +145,11 @@ const AudioRecorder: (props: Props) => ReactElement = ({
         {Math.floor(recordingTime / 60)}:
         {String(recordingTime % 60).padStart(2, "0")}
       </span>
-      {showVisualizer ? (
-        <span
-          className={`audio-recorder-visualizer ${
-            !isRecording ? "display-none" : ""
-          }`}
-        >
-          {mediaRecorder && (
-            <Suspense fallback={<></>}>
-              <LiveAudioVisualizer
-                mediaRecorder={mediaRecorder}
-                barWidth={2}
-                gap={2}
-                width={140}
-                height={30}
-                fftSize={512}
-                maxDecibels={-10}
-                minDecibels={-80}
-                smoothingTimeConstant={0.4}
-              />
-            </Suspense>
-          )}
-        </span>
-      ) : (
+      <span
+        className={`audio-recorder-visualizer ${
+          !isRecording ? "display-none" : ""
+        }`}
+      >
         <span
           className={`audio-recorder-status ${
             !isRecording ? "display-none" : ""
@@ -192,16 +158,7 @@ const AudioRecorder: (props: Props) => ReactElement = ({
           <span className="audio-recorder-status-dot"></span>
           Recording
         </span>
-      )}
-      <img
-        src={isPaused ? resumeSVG : pauseSVG}
-        className={`audio-recorder-options ${
-          !isRecording ? "display-none" : ""
-        } ${classes?.AudioRecorderPauseResumeClass ?? ""}`}
-        onClick={togglePauseResume}
-        title={isPaused ? "Resume recording" : "Pause recording"}
-        data-testid="ar_pause"
-      />
+      </span>
       <img
         src={stopSVG}
         className={`audio-recorder-options ${

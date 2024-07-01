@@ -1,14 +1,13 @@
+import { Microphone } from "@mozartec/capacitor-microphone";
 import { useState, useCallback } from "react";
 
 export interface recorderControls {
   startRecording: () => void;
   stopRecording: () => void;
-  togglePauseResume: () => void;
   recordingBlob?: Blob;
   isRecording: boolean;
   isPaused: boolean;
   recordingTime: number;
-  mediaRecorder?: MediaRecorder;
 }
 
 export type MediaAudioTrackConstraints = Pick<
@@ -40,17 +39,11 @@ export type MediaAudioTrackConstraints = Pick<
  */
 const useAudioRecorder: (
   audioTrackConstraints?: MediaAudioTrackConstraints,
-  onNotAllowedOrFound?: (exception: DOMException) => void,
-  mediaRecorderOptions?: MediaRecorderOptions
-) => recorderControls = (
-  audioTrackConstraints,
-  onNotAllowedOrFound,
-  mediaRecorderOptions
-) => {
+  onNotAllowedOrFound?: (exception: DOMException) => void
+) => recorderControls = (audioTrackConstraints, onNotAllowedOrFound) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder>();
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout>();
   const [recordingBlob, setRecordingBlob] = useState<Blob>();
 
@@ -72,81 +65,47 @@ const useAudioRecorder: (
   const startRecording: () => void = useCallback(() => {
     if (timerInterval != null) return;
 
-    navigator.mediaDevices
-      .getUserMedia({ audio: audioTrackConstraints ?? true })
-      .then((stream) => {
+    Microphone.requestPermissions()
+      .then(async () => {
         setIsRecording(true);
-        const recorder: MediaRecorder = new MediaRecorder(
-          stream,
-          mediaRecorderOptions
-        );
-        setMediaRecorder(recorder);
-        recorder.start();
+        await Microphone.startRecording();
         _startTimer();
-
-        recorder.addEventListener("dataavailable", (event) => {
-          setRecordingBlob(event.data);
-          recorder.stream.getTracks().forEach((t) => t.stop());
-          setMediaRecorder(undefined);
-        });
       })
       .catch((err: DOMException) => {
         console.log(err.name, err.message, err.cause);
         onNotAllowedOrFound?.(err);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     timerInterval,
     setIsRecording,
-    setMediaRecorder,
     _startTimer,
     setRecordingBlob,
     onNotAllowedOrFound,
-    mediaRecorderOptions,
   ]);
 
   /**
    * Calling this method results in a recording in progress being stopped and the resulting audio being present in `recordingBlob`. Sets `isRecording` to false
    */
-  const stopRecording: () => void = useCallback(() => {
-    mediaRecorder?.stop();
+  const stopRecording: () => void = useCallback(async () => {
+   const res = await Microphone.stopRecording();
     _stopTimer();
     setRecordingTime(0);
     setIsRecording(false);
     setIsPaused(false);
-  }, [
-    mediaRecorder,
-    setRecordingTime,
-    setIsRecording,
-    setIsPaused,
-    _stopTimer,
-  ]);
 
-  /**
-   * Calling this method would pause the recording if it is currently running or resume if it is paused. Toggles the value `isPaused`
-   */
-  const togglePauseResume: () => void = useCallback(() => {
-    if (isPaused) {
-      setIsPaused(false);
-      mediaRecorder?.resume();
-      _startTimer();
-    } else {
-      setIsPaused(true);
-      _stopTimer();
-      mediaRecorder?.pause();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaRecorder, setIsPaused, _startTimer, _stopTimer]);
+    
+
+  }, [setRecordingTime, setIsRecording, setIsPaused, _stopTimer]);
 
   return {
     startRecording,
     stopRecording,
-    togglePauseResume,
     recordingBlob,
     isRecording,
     isPaused,
     recordingTime,
-    mediaRecorder,
   };
 };
 

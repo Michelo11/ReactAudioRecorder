@@ -70,6 +70,6 @@
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
-    "react-audio-visualize": "^1.1.3"
+    "@mozartec/capacitor-microphone": "^6.0.0"
   }
 }
